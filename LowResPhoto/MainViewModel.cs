@@ -234,7 +234,7 @@ namespace LowResPhoto
             {
                 targetFI.Delete();
             }
-            var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {LongSize} -o {targetFI.FullName} {sourceFI.FullName}") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
+            var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {LongSize} -o \"{targetFI.FullName}\" \"{sourceFI.FullName}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
             var proc = Process.Start(psi);
             proc.WaitForExit(5000);
         }
