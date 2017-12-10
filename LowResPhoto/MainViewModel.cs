@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using LowResPhoto.Properties;
 using System.Reflection;
+using System.Windows;
 
 namespace LowResPhoto
 {
@@ -28,11 +29,14 @@ namespace LowResPhoto
 
     public class MainViewModel : NotifiableBase
     {
+        public event EventHandler<WorkItemCompletedEventArgs> OnWorkItemCompleted;
+
         public MainViewModel()
         {
             PersistAllSettings(PersistDirection.Load);
         }
 
+        #region Persistence
         private PropertyInfo[] _persistedSettings;
         public PropertyInfo[] PersistedSettings
         {
@@ -64,7 +68,7 @@ namespace LowResPhoto
                 var vmProp = MyProps.FirstOrDefault(x => x.Name.Equals(setting.Name, StringComparison.InvariantCultureIgnoreCase));
                 if (vmProp != null)
                 {
-                    switch(direction)
+                    switch (direction)
                     {
                         case PersistDirection.Load:
                             vmProp.SetValue(this, setting.GetValue(Settings.Default));
@@ -72,12 +76,13 @@ namespace LowResPhoto
                         case PersistDirection.Save:
                             setting.SetValue(Settings.Default, vmProp.GetValue(this));
                             break;
-                    }   
+                    }
                 }
             }
-            if(direction == PersistDirection.Save)
+            if (direction == PersistDirection.Save)
                 Settings.Default.Save();
         }
+        #endregion
 
         private int _WindowHeight;
         public int WindowHeight
@@ -121,6 +126,13 @@ namespace LowResPhoto
             set { _SkipExisting = value; NotifyPropertyChanged(nameof(SkipExisting)); }
         }
 
+        private bool _AutoScroll;
+        public bool AutoScroll
+        {
+            get { return _AutoScroll; }
+            set { _AutoScroll = value; NotifyPropertyChanged(nameof(AutoScroll)); }
+        }
+
         private int _Concurrency;
         public int Concurrency
         {
@@ -145,7 +157,7 @@ namespace LowResPhoto
                 return _SyncCommand;
             }
         }
-
+        
         private string _SyncCaption = "Sync";
         public string SyncCaption
         {
@@ -181,6 +193,12 @@ namespace LowResPhoto
             if (IsSyncing)
             {
                 _isCanceling = true;
+                IsSyncing = false;
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    Folders.Where(x => x.Status == ConvertStatus.Working).ToList().ForEach(x => x.Status = ConvertStatus.Cancelled);
+                }), DispatcherPriority.ApplicationIdle);
+                
             }
             else
             {
@@ -188,6 +206,7 @@ namespace LowResPhoto
                 LowResFolder = LowResFolder.TrimEnd('\\');
                 IsSyncing = true;
                 _hasAnalyzeDone = false;
+                _isCanceling = false;
                 _hasScheduleDone = false;
                 _uiDispatcher = Dispatcher.CurrentDispatcher;
                 Folders.Clear();
@@ -231,7 +250,10 @@ namespace LowResPhoto
                     DeleteTargetOnlyFiles(currentFolder, targetFolder);
                 }
                 if (_isCanceling)
+                {
+                    currentFolder.Status = ConvertStatus.Cancelled;
                     return;
+                }
                 foreach (var file in currentFolder.JpegFiles)
                 {
                     _workQueue.Enqueue(new WorkItem() { Folder = currentFolder, File = file });
@@ -291,6 +313,8 @@ namespace LowResPhoto
                 if (wi.Folder.CountAll <= wi.Folder.CountDone)
                     wi.Folder.Status = ConvertStatus.Done;
             }
+            if (AutoScroll)
+                OnWorkItemCompleted?.Invoke(this, new WorkItemCompletedEventArgs() { Folder = wi.Folder });
         }
 
         public string NConvertExe
@@ -406,7 +430,8 @@ namespace LowResPhoto
         Pending,
         Working,
         Done,
-        Error
+        Error,
+        Cancelled
     }
 
     public enum PersistDirection
@@ -415,4 +440,8 @@ namespace LowResPhoto
         Save
     }
 
+    public class WorkItemCompletedEventArgs : EventArgs
+    {
+        public ConvertFolder Folder { get; set; }
+    }
 }

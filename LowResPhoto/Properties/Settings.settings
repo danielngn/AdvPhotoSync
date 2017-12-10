@@ -26,5 +26,8 @@
     <Setting Name="LongSize" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1920</Value>
     </Setting>
+    <Setting Name="AutoScroll" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

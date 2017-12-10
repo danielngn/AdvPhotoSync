@@ -118,5 +118,17 @@ namespace LowResPhoto.Properties {
                 this["LongSize"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoScroll {
+            get {
+                return ((bool)(this["AutoScroll"]));
+            }
+            set {
+                this["AutoScroll"] = value;
+            }
+        }
     }
 }

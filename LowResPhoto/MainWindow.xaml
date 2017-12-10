@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LowResPhoto"
         mc:Ignorable="d"
-        Title="MainWindow" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing">
+        Title="MainWindow" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing" DataContextChanged="Window_DataContextChanged">
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
@@ -49,15 +49,16 @@
             
         </GroupBox>
         <StackPanel Grid.Row="1" Margin="5" Orientation="Horizontal">
-            <Button Content="{Binding Path=SyncCaption}" Padding="15,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}"/>
-            <CheckBox Content="Skip Existing" Margin="10,5" IsChecked="{Binding Path=SkipExisting}"/>
-            <TextBlock Text="Concurrency:" Margin="5"/>
-            <TextBox Text="{Binding Path=Concurrency, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
-            <TextBlock Text="Long Size:" Margin="5"/>
-            <TextBox Text="{Binding Path=LongSize, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
+            <Button Content="{Binding Path=SyncCaption}" Padding="25,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}" Margin="5,0"/>
+            <CheckBox Content="Skip Existing" Margin="10,5" IsChecked="{Binding Path=SkipExisting}" VerticalAlignment="Center"/>
+            <CheckBox Content="Auto Scroll" Margin="10,5" IsChecked="{Binding Path=AutoScroll}" VerticalAlignment="Center"/>
+            <TextBlock Text="Concurrency:" Margin="5" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding Path=Concurrency, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="40" HorizontalContentAlignment="Center" VerticalAlignment="Center"/>
+            <TextBlock Text="Long Size:" Margin="5" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding Path=LongSize, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center" VerticalAlignment="Center"/>
         </StackPanel>
         <GroupBox Grid.Row="2" Header="Progress" Margin="5">
-            <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5">
+            <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Status" Width="Auto" Binding="{Binding Path=Status}"/>
                     <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>

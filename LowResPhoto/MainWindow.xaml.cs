@@ -25,10 +25,26 @@ namespace LowResPhoto
             InitializeComponent();
         }
 
+        private MainViewModel _vm;
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            var vm = this.DataContext as MainViewModel;
-            vm.SaveSetting();
+            _vm?.SaveSetting();            
+        }
+
+        private void Window_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            _vm = DataContext as MainViewModel;
+            if(_vm!=null)
+                _vm.OnWorkItemCompleted += _vm_OnWorkItemCompleted;
+        }
+
+        private void _vm_OnWorkItemCompleted(object sender, WorkItemCompletedEventArgs e)
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                datagrid.ScrollIntoView(e.Folder);
+            }));            
         }
     }
 }
