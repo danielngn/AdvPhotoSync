@@ -24,5 +24,11 @@ namespace LowResPhoto
         {
             InitializeComponent();
         }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var vm = this.DataContext as MainViewModel;
+            vm.SaveSetting();
+        }
     }
 }

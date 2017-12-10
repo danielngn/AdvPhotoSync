@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LowResPhoto"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="800" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}">
+        Title="MainWindow" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing">
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
@@ -40,11 +40,11 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="High Res Folder:"/>
-                <TextBox Grid.Column="1" Text="{Binding Path=HighResFolder}"/>
+                <TextBox Grid.Column="1" Text="{Binding Path=HighResFolder, UpdateSourceTrigger=PropertyChanged}"/>
                 <TextBlock Grid.Row="1" Text="Low Res Folder:"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=LowResFolder}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=LowResFolder, UpdateSourceTrigger=PropertyChanged}"/>
                 <TextBlock Grid.Row="2" Text="NConvert Folder:"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=NConvertFolder}"/>                
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>                
             </Grid>
             
         </GroupBox>
@@ -52,9 +52,9 @@
             <Button Content="{Binding Path=SyncCaption}" Padding="15,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}"/>
             <CheckBox Content="Skip Existing" Margin="10,5" IsChecked="{Binding Path=SkipExisting}"/>
             <TextBlock Text="Concurrency:" Margin="5"/>
-            <TextBox Text="{Binding Path=Concurrency}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
+            <TextBox Text="{Binding Path=Concurrency, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
             <TextBlock Text="Long Size:" Margin="5"/>
-            <TextBox Text="{Binding Path=LongSize}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
+            <TextBox Text="{Binding Path=LongSize, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center"/>
         </StackPanel>
         <GroupBox Grid.Row="2" Header="Progress" Margin="5">
             <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5">

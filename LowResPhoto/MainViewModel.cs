@@ -11,6 +11,8 @@ using System.Threading;
 using System.Windows.Threading;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using LowResPhoto.Properties;
+using System.Reflection;
 
 namespace LowResPhoto
 {
@@ -26,42 +28,107 @@ namespace LowResPhoto
 
     public class MainViewModel : NotifiableBase
     {
-        private string _HighResFolder = @"M:\Backup\Photo\Shanghai";
+        public MainViewModel()
+        {
+            PersistAllSettings(PersistDirection.Load);
+        }
+
+        private PropertyInfo[] _persistedSettings;
+        public PropertyInfo[] PersistedSettings
+        {
+            get
+            {
+                if (_persistedSettings == null)
+                    _persistedSettings = Settings.Default.GetType().GetProperties().Where(x => x.CustomAttributes.Any(y => y.AttributeType == typeof(System.Configuration.UserScopedSettingAttribute))).ToArray();
+
+                return _persistedSettings;
+            }
+        }
+
+        private PropertyInfo[] _myProps;
+        public PropertyInfo[] MyProps
+        {
+            get
+            {
+                if (_myProps == null)
+                    _myProps = typeof(MainViewModel).GetProperties();
+
+                return _myProps;
+            }
+        }
+
+        private void PersistAllSettings(PersistDirection direction)
+        {
+            foreach (var setting in PersistedSettings)
+            {
+                var vmProp = MyProps.FirstOrDefault(x => x.Name.Equals(setting.Name, StringComparison.InvariantCultureIgnoreCase));
+                if (vmProp != null)
+                {
+                    switch(direction)
+                    {
+                        case PersistDirection.Load:
+                            vmProp.SetValue(this, setting.GetValue(Settings.Default));
+                            break;
+                        case PersistDirection.Save:
+                            setting.SetValue(Settings.Default, vmProp.GetValue(this));
+                            break;
+                    }   
+                }
+            }
+            if(direction == PersistDirection.Save)
+                Settings.Default.Save();
+        }
+
+        private int _WindowHeight;
+        public int WindowHeight
+        {
+            get { return _WindowHeight; }
+            set { _WindowHeight = value; NotifyPropertyChanged(nameof(WindowHeight)); }
+        }
+
+        private int _WindowWidth;
+        public int WindowWidth
+        {
+            get { return _WindowWidth; }
+            set { _WindowWidth = value; NotifyPropertyChanged(nameof(WindowWidth)); }
+        }
+
+        private string _HighResFolder;
         public string HighResFolder
         {
             get { return _HighResFolder; }
             set { _HighResFolder = value; NotifyPropertyChanged(nameof(HighResFolder)); }
         }
 
-        private string _LowResFolder = @"N:\Photo-LowRes\Shanghai";
+        private string _LowResFolder;
         public string LowResFolder
         {
             get { return _LowResFolder; }
             set { _LowResFolder = value; NotifyPropertyChanged(nameof(LowResFolder)); }
         }
 
-        private string _NConvertFolder = @"C:\Users\Daniel\Downloads\XnView";
+        private string _NConvertFolder;
         public string NConvertFolder
         {
             get { return _NConvertFolder; }
             set { _NConvertFolder = value; NotifyPropertyChanged(nameof(NConvertFolder)); }
         }
 
-        private bool _SkipExisting = true;
+        private bool _SkipExisting;
         public bool SkipExisting
         {
             get { return _SkipExisting; }
             set { _SkipExisting = value; NotifyPropertyChanged(nameof(SkipExisting)); }
         }
 
-        private int _Concurrency = 6;
+        private int _Concurrency;
         public int Concurrency
         {
             get { return _Concurrency; }
             set { _Concurrency = value; NotifyPropertyChanged(nameof(Concurrency)); }
         }
 
-        private int _LongSize = 1920;
+        private int _LongSize;
         public int LongSize
         {
             get { return _LongSize; }
@@ -281,6 +348,11 @@ namespace LowResPhoto
         }
 
         public ObservableCollection<ConvertFolder> Folders { get; } = new ObservableCollection<ConvertFolder>();
+
+        public void SaveSetting()
+        {
+            PersistAllSettings(PersistDirection.Save);
+        }
     }
 
     public class ConvertFolder : NotifiableBase
@@ -336,4 +408,11 @@ namespace LowResPhoto
         Done,
         Error
     }
+
+    public enum PersistDirection
+    {
+        Load,
+        Save
+    }
+
 }
