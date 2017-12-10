@@ -161,12 +161,7 @@ namespace LowResPhoto
                     targetFolder.Create();
                 else
                 {
-                    var existingFiles = targetFolder.GetFiles();
-                    var toDelete = existingFiles.Where(ef => !currentFolder.JpegFiles.Any(x => x.Name.Equals(ef.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
-                    foreach(var delFile in toDelete)
-                    {
-                        delFile.Delete();
-                    }
+                    DeleteTargetOnlyFiles(currentFolder, targetFolder);
                 }
                 if (_isCanceling)
                     return;
@@ -176,6 +171,17 @@ namespace LowResPhoto
                 }
             }
             _hasScheduleDone = true;
+        }
+
+        private static void DeleteTargetOnlyFiles(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        {
+            var existingFiles = targetFolder.GetFiles();
+            var toDelete = existingFiles.Where(ef => !sourceFolder.JpegFiles.Any(x => x.Name.Equals(ef.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
+            sourceFolder.CountDelete = toDelete.Count;
+            foreach (var delFile in toDelete)
+            {
+                delFile.Delete();
+            }
         }
 
         private int _currentRunningCount;
@@ -305,6 +311,13 @@ namespace LowResPhoto
         {
             get { return _CountDone; }
             set { _CountDone = value; NotifyPropertyChanged(nameof(CountDone)); }
+        }
+
+        private int _CountDelete;
+        public int CountDelete
+        {
+            get { return _CountDelete; }
+            set { _CountDelete = value; NotifyPropertyChanged(nameof(CountDelete)); }
         }
 
         public List<FileInfo> JpegFiles { get; set; }

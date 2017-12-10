@@ -10,6 +10,11 @@
         <local:MainViewModel/>
     </Window.DataContext>
     <Grid>
+        <Grid.Resources>
+            <Style x:Key="RightAlignedCellStyle">
+                <Setter Property="FrameworkElement.HorizontalAlignment" Value="Right"/>
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -56,20 +61,9 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Status" Width="Auto" Binding="{Binding Path=Status}"/>
                     <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>
-                    <DataGridTextColumn Header="# All" Width="Auto" Binding="{Binding Path=CountAll}">
-                        <DataGridTextColumn.CellStyle>
-                            <Style>
-                                <Setter Property="FrameworkElement.HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.CellStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="# Done" Width="Auto" Binding="{Binding Path=CountDone}">
-                        <DataGridTextColumn.CellStyle>
-                            <Style>
-                                <Setter Property="FrameworkElement.HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.CellStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="# Source" Width="Auto" Binding="{Binding Path=CountAll}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                    <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountDone}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                    <DataGridTextColumn Header="# Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>
