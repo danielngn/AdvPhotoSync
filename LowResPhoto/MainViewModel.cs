@@ -126,6 +126,13 @@ namespace LowResPhoto
             set { _SkipExisting = value; NotifyPropertyChanged(nameof(SkipExisting)); }
         }
 
+        private bool _RetrieveMeta;
+        public bool RetrieveMeta
+        {
+            get { return _RetrieveMeta; }
+            set { _RetrieveMeta = value; NotifyPropertyChanged(nameof(RetrieveMeta)); }
+        }
+
         private bool _AutoScroll;
         public bool AutoScroll
         {
@@ -285,10 +292,14 @@ namespace LowResPhoto
                 WorkItem wi;
                 if (!_workQueue.TryDequeue(out wi))
                     continue;
+
+                if(RetrieveMeta)
+                    DoRetrieveMeta(wi.File);
+                
                 var targetFI = new FileInfo(wi.File.FullName.Replace(HighResFolder, LowResFolder));
                 if (targetFI.Exists && SkipExisting)
                 {
-                    AddOneDone(wi);
+                    AddOneDone(wi, true);
                     continue;
                 }
                 else
@@ -297,7 +308,7 @@ namespace LowResPhoto
                     Task.Factory.StartNew(() =>
                     {
                         ConvertFile(wi.File, targetFI);
-                        AddOneDone(wi);
+                        AddOneDone(wi, false);
                         Interlocked.Decrement(ref _currentRunningCount);
                     });
                 }
@@ -305,11 +316,20 @@ namespace LowResPhoto
             IsSyncing = false;
         }
 
-        private void AddOneDone(WorkItem wi)
+        private void DoRetrieveMeta(FileInfo file)
+        {
+            MetaRetriever.RetrieveFromFile(file);
+        }
+
+        private void AddOneDone(WorkItem wi, bool isSkipped)
         {
             lock (wi.Folder)
             {
-                wi.Folder.CountDone++;
+                if (isSkipped)
+                    wi.Folder.CountSkipped++;
+                else
+                    wi.Folder.CountCopied++;
+                                
                 if (wi.Folder.CountAll <= wi.Folder.CountDone)
                     wi.Folder.Status = ConvertStatus.Done;
             }
@@ -402,11 +422,23 @@ namespace LowResPhoto
             set { _CountAll = value; NotifyPropertyChanged(nameof(CountAll)); }
         }
 
-        private int _CountDone;
         public int CountDone
         {
-            get { return _CountDone; }
-            set { _CountDone = value; NotifyPropertyChanged(nameof(CountDone)); }
+            get { return CountSkipped + CountCopied; }
+        }
+
+        private int _CountSkipped;
+        public int CountSkipped
+        {
+            get { return _CountSkipped; }
+            set { _CountSkipped = value; NotifyPropertyChanged(nameof(CountSkipped)); }
+        }
+
+        private int _CountCopied;
+        public int CountCopied
+        {
+            get { return _CountCopied; }
+            set { _CountCopied = value; NotifyPropertyChanged(nameof(CountCopied)); }
         }
 
         private int _CountDelete;
@@ -430,6 +462,7 @@ namespace LowResPhoto
         Pending,
         Working,
         Done,
+        Skipped,
         Error,
         Cancelled
     }

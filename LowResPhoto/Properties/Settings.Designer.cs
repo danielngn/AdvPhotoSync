@@ -130,5 +130,17 @@ namespace LowResPhoto.Properties {
                 this["AutoScroll"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool RetrieveMeta {
+            get {
+                return ((bool)(this["RetrieveMeta"]));
+            }
+            set {
+                this["RetrieveMeta"] = value;
+            }
+        }
     }
 }
