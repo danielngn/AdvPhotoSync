@@ -19,6 +19,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <GroupBox Header="Path" Margin="5">
             <Grid>
@@ -70,6 +71,14 @@
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>
-                  
+
+        <GroupBox Grid.Row="3" Header="MetaDB" Margin="5" Visibility="{Binding Path=MetaDbVisibility}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Added:" Margin="5"/>
+                <TextBlock Text="{Binding AddedRecordCount}" Margin="5"/>
+                <TextBlock Text="Total:" Margin="5"/>
+                <TextBlock Text="{Binding TotalRecordCount}" Margin="5"/>
+            </StackPanel>
+        </GroupBox>
     </Grid>
 </Window>
