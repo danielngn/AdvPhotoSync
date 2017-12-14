@@ -9,7 +9,7 @@ namespace PhotoMetadata
         public int PhotoId { get; set; }
         public string Name { get; set; }
         public string FullPath { get; set; }
-        public DateTime DateTaken { get; set; }
+        public DateTime? DateTaken { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public string EquipManufacturer { get; set; }

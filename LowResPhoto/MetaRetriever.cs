@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -35,9 +36,14 @@ namespace LowResPhoto
                     photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
 
                 var dateTakenStr = GetStringFromId(0x132, img);
-                DateTime dateTaken;
-                if (DateTime.TryParseExact(dateTakenStr, "yyyy:MM:d H:m:s", CultureInfo.InvariantCulture, DateTimeStyles.None, out dateTaken))
-                    photo.DateTaken = dateTaken;
+                if (!string.IsNullOrEmpty(dateTakenStr))
+                {
+                    DateTime dateTaken;
+                    if (DateTime.TryParseExact(dateTakenStr, "yyyy:MM:d H:m:s", CultureInfo.InvariantCulture, DateTimeStyles.None, out dateTaken))
+                    {
+                        photo.DateTaken = dateTaken;
+                    }
+                }
             }
             return photo;
         }
