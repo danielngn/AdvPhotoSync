@@ -28,11 +28,11 @@ namespace LowResPhoto
 
                 var apertureApex = GetDoubleFromId(0x9202, img);
                 if (apertureApex != null)
-                    photo.FNumber = Math.Pow(2, apertureApex.Value / 2);
+                    photo.FNumber = Math.Round(Math.Pow(2, apertureApex.Value / 2), 1);
 
                 var shutterApex = GetDoubleFromId(0x9201, img);
                 if (shutterApex != null)
-                    photo.ShutterSpeed = Math.Pow(2, shutterApex.Value);
+                    photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
 
                 var dateTakenStr = GetStringFromId(0x132, img);
                 DateTime dateTaken;

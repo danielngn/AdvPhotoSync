@@ -68,17 +68,27 @@
             <TextBox Text="{Binding Path=LongSize, UpdateSourceTrigger=PropertyChanged}" Margin="5" Width="50" HorizontalContentAlignment="Center" VerticalAlignment="Center"/>
         </StackPanel>
         <GroupBox Grid.Row="2" Header="Progress" Margin="5">
-            <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Status" Width="Auto" Binding="{Binding Path=Status}"/>
-                    <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>
-                    <DataGridTextColumn Header="# Source" Width="Auto" Binding="{Binding Path=CountAll}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                    <DataGridTextColumn Header="# Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                    <DataGridTextColumn Header="# Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                    <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountCopied}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                    <DataGridTextColumn Header="# Meta" Width="Auto" Binding="{Binding Path=CountMeta}" CellStyle="{StaticResource RightAlignedCellStyle}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
-                </DataGrid.Columns>
-            </DataGrid>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Status" Width="Auto" Binding="{Binding Path=Status}"/>
+                        <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>
+                        <DataGridTextColumn Header="# Source" Width="Auto" Binding="{Binding Path=CountAll}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                        <DataGridTextColumn Header="# Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                        <DataGridTextColumn Header="# Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                        <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountCopied}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                        <DataGridTextColumn Header="# Meta" Width="Auto" Binding="{Binding Path=CountMeta}" CellStyle="{StaticResource RightAlignedCellStyle}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                    <TextBlock Text="Time Running:" Margin="5"/>
+                    <TextBlock Text="{Binding Path=TimeRunning}" Margin="5"/>
+                </StackPanel>
+            </Grid>
         </GroupBox>
 
         <GroupBox Grid.Row="3" Header="MetaDB" Margin="5" Visibility="{Binding Path=MetaDbVisibility}">

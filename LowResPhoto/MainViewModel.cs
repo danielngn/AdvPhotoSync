@@ -167,6 +167,13 @@ namespace LowResPhoto
             set { _MetaDbVisibility = value; NotifyPropertyChanged(nameof(MetaDbVisibility)); }
         }
 
+        private string _TimeRunning;
+        public string TimeRunning
+        {
+            get { return _TimeRunning; }
+            set { _TimeRunning = value; NotifyPropertyChanged(nameof(TimeRunning)); }
+        }
+
         private ICommand _SyncCommand;
         public ICommand SyncCommand
         {
@@ -189,6 +196,9 @@ namespace LowResPhoto
         private bool _isCanceling;
         private bool _hasAnalyzeDone;
         private bool _hasScheduleDone;
+        private DateTime _startTime;
+        private Timer _runningTimer;
+        
         private bool _isSyncing;
         public bool IsSyncing
         {
@@ -200,12 +210,21 @@ namespace LowResPhoto
                 if (_isSyncing)
                 {
                     SyncCaption = "Cancel";
+                    _startTime = DateTime.Now;
+                    _runningTimer = new Timer(new TimerCallback(SetRunningTime));
+                    _runningTimer.Change(0, 1000);
                 }
                 else
                 {
                     SyncCaption = "Sync";
+                    _runningTimer?.Change(0, -1);
                 }
             }
+        }
+
+        private void SetRunningTime(object stateInfo)
+        {
+            TimeRunning = (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss");
         }
 
         private void DoSync()
