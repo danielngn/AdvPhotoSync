@@ -6,7 +6,7 @@ namespace PhotoMetadata
 {
     public class Photo
     {
-        public int PhototId { get; set; }
+        public int PhotoId { get; set; }
         public string Name { get; set; }
         public string FullPath { get; set; }
         public DateTime DateTaken { get; set; }
@@ -24,7 +24,7 @@ namespace PhotoMetadata
 
         public void UpdateFrom(Photo source)
         {
-            string[] excludeProps = new string[] { nameof(FullPath), nameof(PhototId) };
+            string[] excludeProps = new string[] { nameof(FullPath), nameof(PhotoId) };
             foreach (var prop in AllProps)
             {
                 if (!prop.CanWrite || excludeProps.Contains(prop.Name))

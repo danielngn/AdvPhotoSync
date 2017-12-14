@@ -7,6 +7,6 @@ namespace PhotoMetadata
 {
     public class PhotoContext : DbContext
     {
-        public DbSet<Photo> Photos;
+        public DbSet<Photo> Photos { get; set; }
     }
 }

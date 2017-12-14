@@ -9,6 +9,11 @@
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
+    <Window.Resources>
+        <ResourceDictionary>
+            <FrameworkElement x:Key="ProxyElement" DataContext="{Binding}"/>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <Grid.Resources>
             <Style x:Key="RightAlignedCellStyle">
@@ -21,6 +26,9 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <ContentControl Content="{StaticResource ProxyElement}" Visibility="Collapsed"/>
+
         <GroupBox Header="Path" Margin="5">
             <Grid>
                 <Grid.Resources>
@@ -45,9 +53,9 @@
                 <TextBlock Grid.Row="1" Text="Low Res Folder:"/>
                 <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=LowResFolder, UpdateSourceTrigger=PropertyChanged}"/>
                 <TextBlock Grid.Row="2" Text="NConvert Folder:"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>                
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>
             </Grid>
-            
+
         </GroupBox>
         <StackPanel Grid.Row="1" Margin="5" Orientation="Horizontal">
             <Button Content="{Binding Path=SyncCaption}" Padding="25,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}" Margin="5,0"/>
@@ -68,13 +76,14 @@
                     <DataGridTextColumn Header="# Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                     <DataGridTextColumn Header="# Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                     <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountCopied}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                    <DataGridTextColumn Header="# Meta" Width="Auto" Binding="{Binding Path=CountMeta}" CellStyle="{StaticResource RightAlignedCellStyle}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </GroupBox>
 
         <GroupBox Grid.Row="3" Header="MetaDB" Margin="5" Visibility="{Binding Path=MetaDbVisibility}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Added:" Margin="5"/>
+                <TextBlock Text="Saved:" Margin="5"/>
                 <TextBlock Text="{Binding AddedRecordCount}" Margin="5"/>
                 <TextBlock Text="Total:" Margin="5"/>
                 <TextBlock Text="{Binding TotalRecordCount}" Margin="5"/>

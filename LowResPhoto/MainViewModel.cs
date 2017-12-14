@@ -167,31 +167,6 @@ namespace LowResPhoto
             set { _MetaDbVisibility = value; NotifyPropertyChanged(nameof(MetaDbVisibility)); }
         }
 
-        private int _AddedRecordCount;
-        public int AddedRecordCount
-        {
-            get { return _AddedRecordCount; }
-            set { _AddedRecordCount = value; NotifyPropertyChanged(nameof(AddedRecordCount)); }
-        }
-
-        private int _TotalRecordCount;
-        public int TotalRecordCount
-        {
-            get { return _TotalRecordCount; }
-            set { _TotalRecordCount = value; NotifyPropertyChanged(nameof(TotalRecordCount)); }
-        }
-
-        private PhotoContext _metaContext;
-        public PhotoContext MetaContext
-        {
-            get
-            {
-                if (_metaContext == null)
-                    _metaContext = new PhotoContext();
-                return _metaContext;
-            }
-        }
-
         private ICommand _SyncCommand;
         public ICommand SyncCommand
         {
@@ -229,17 +204,8 @@ namespace LowResPhoto
                 else
                 {
                     SyncCaption = "Sync";
-                    if (RetrieveMeta)
-                        SaveDB();
                 }
             }
-        }
-
-        private async void SaveDB()
-        {
-            var changeCount = await MetaContext.SaveChangesAsync();
-            AddedRecordCount = changeCount;
-            TotalRecordCount = MetaContext.Photos.Count();
         }
 
         private void DoSync()
@@ -270,6 +236,8 @@ namespace LowResPhoto
                 });
                 ThreadPool.QueueUserWorkItem(x => ScheduleWork());
                 ThreadPool.QueueUserWorkItem(x => RunWork());
+                if (RetrieveMeta)
+                    ThreadPool.QueueUserWorkItem(x => SaveMeta());
             }
         }
 
@@ -287,12 +255,14 @@ namespace LowResPhoto
                 return;
             }
             _workQueue = new ConcurrentQueue<WorkItem>();
+            _photoQueue = new ConcurrentQueue<Photo>();
+            AddedRecordCount = 0;
             ConvertFolder currentFolder;
             while (!_isCanceling && (currentFolder = GetNextFolder()) != null)
             {
                 while (_workQueue.Count > 200)
                 {
-                    Thread.Sleep(300);
+                    Thread.Sleep(200);
                 }
                 currentFolder.Status = ConvertStatus.Working;
                 var targetFolder = new DirectoryInfo(currentFolder.Path.Replace(HighResFolder, LowResFolder));
@@ -328,12 +298,20 @@ namespace LowResPhoto
 
         private int _currentRunningCount;
 
+        private bool ShouldRunWork
+        {
+            get
+            {
+                return !_isCanceling && (_workQueue == null || _workQueue.Any() || !_hasScheduleDone);
+            }
+        }
+
         private void RunWork()
         {
-            while (!_isCanceling && (_workQueue == null || _workQueue.Any() || !_hasScheduleDone))
+            while (ShouldRunWork)
             {
                 while (_workQueue == null || _currentRunningCount >= Concurrency || (!_workQueue.Any() && !_hasScheduleDone))
-                    Thread.Sleep(200);
+                    Thread.Sleep(50);
 
                 WorkItem wi;
                 if (!_workQueue.TryDequeue(out wi))
@@ -344,11 +322,12 @@ namespace LowResPhoto
                 if (targetFI.Exists && SkipExisting)
                 {
                     toCopy = false;
-                    AddOneDone(wi, true);
                 }
                 if (!toCopy && !RetrieveMeta)
+                {
+                    AddOneDone(wi, false);
                     continue;
-
+                }
                 Interlocked.Increment(ref _currentRunningCount);
                 Task.Factory.StartNew(() =>
                 {
@@ -358,29 +337,92 @@ namespace LowResPhoto
                     if (toCopy)
                         ConvertFile(wi.File, targetFI);
 
-                    AddOneDone(wi, false);
+                    AddOneDone(wi, toCopy);
                     Interlocked.Decrement(ref _currentRunningCount);
                 });
             }
             IsSyncing = false;
         }
 
-        private void DoRetrieveMeta(FileInfo file)
+        #region Meta
+
+        private int _AddedRecordCount;
+        public int AddedRecordCount
         {
-            var photo = MetaRetriever.RetrieveFromFile(file);
-            var existing = MetaContext.Photos.FirstOrDefault(x => x.FullPath == photo.FullPath);
-            if (existing == null)
-                MetaContext.Photos.Add(photo);
+            get { return _AddedRecordCount; }
+            set { _AddedRecordCount = value; NotifyPropertyChanged(nameof(AddedRecordCount)); }
         }
 
-        private void AddOneDone(WorkItem wi, bool isSkipped)
+        private int _TotalRecordCount;
+        public int TotalRecordCount
+        {
+            get { return _TotalRecordCount; }
+            set { _TotalRecordCount = value; NotifyPropertyChanged(nameof(TotalRecordCount)); }
+        }
+
+        private PhotoContext _metaContext;
+        public PhotoContext MetaContext
+        {
+            get
+            {
+                if (_metaContext == null)
+                    _metaContext = new PhotoContext();
+                return _metaContext;
+            }
+        }
+
+        private ConcurrentQueue<Photo> _photoQueue;
+        private const int MaxSave = 50;
+        private int _pendingAddCount;
+
+        private void SaveMeta()
+        {
+            while (ShouldRunWork)
+            {
+                while (_photoQueue == null || (!_photoQueue.Any() && !_hasScheduleDone))
+                    Thread.Sleep(200);
+
+                Photo photo;
+                if (!_photoQueue.TryDequeue(out photo))
+                    continue;
+
+                var existing = MetaContext.Photos.FirstOrDefault(x => x.FullPath == photo.FullPath);
+                if (existing == null)
+                {
+                    MetaContext.Photos.Add(photo);
+                    _pendingAddCount++;
+                }
+                if (_pendingAddCount >= MaxSave)
+                    SaveDB();
+            }
+            SaveDB();
+        }
+
+        private void SaveDB()
+        {
+            var count = MetaContext.SaveChanges();
+            AddedRecordCount += count;
+            TotalRecordCount = MetaContext.Photos.Count();
+            _pendingAddCount = 0;
+        }
+
+        private void DoRetrieveMeta(FileInfo fi)
+        {
+            _photoQueue.Enqueue(MetaRetriever.RetrieveFromFile(fi));
+        }
+
+        #endregion
+        private void AddOneDone(WorkItem wi, bool isCopied)
         {
             lock (wi.Folder)
             {
-                if (isSkipped)
-                    wi.Folder.CountSkipped++;
-                else
+                if (isCopied)
                     wi.Folder.CountCopied++;
+                else
+                    wi.Folder.CountSkipped++;
+
+                if (RetrieveMeta)
+                    wi.Folder.CountMeta++;
 
                 if (wi.Folder.CountAll <= wi.Folder.CountDone)
                     wi.Folder.Status = ConvertStatus.Done;
@@ -498,6 +540,13 @@ namespace LowResPhoto
         {
             get { return _CountDelete; }
             set { _CountDelete = value; NotifyPropertyChanged(nameof(CountDelete)); }
+        }
+
+        private int _CountMeta;
+        public int CountMeta
+        {
+            get { return _CountMeta; }
+            set { _CountMeta = value; NotifyPropertyChanged(nameof(CountMeta)); }
         }
 
         public List<FileInfo> JpegFiles { get; set; }
