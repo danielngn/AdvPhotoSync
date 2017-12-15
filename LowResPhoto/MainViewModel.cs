@@ -174,6 +174,10 @@ namespace LowResPhoto
             set { _TimeRunning = value; NotifyPropertyChanged(nameof(TimeRunning)); }
         }
 
+        public ObservableCollection<ConvertFolder> Folders { get; } = new ObservableCollection<ConvertFolder>();
+
+        public ObservableCollection<LogItem> Logs { get; } = new ObservableCollection<LogItem>();
+
         private ICommand _SyncCommand;
         public ICommand SyncCommand
         {
@@ -198,6 +202,13 @@ namespace LowResPhoto
         private bool _hasScheduleDone;
         private DateTime _startTime;
         private Timer _runningTimer;
+        private ConcurrentQueue<WorkItem> _workQueue;
+        private int _currentRunningCount;
+        
+        private void SetRunningTime(object stateInfo)
+        {
+            TimeRunning = (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss");
+        }
 
         private bool _isSyncing;
         public bool IsSyncing
@@ -222,11 +233,6 @@ namespace LowResPhoto
             }
         }
 
-        private void SetRunningTime(object stateInfo)
-        {
-            TimeRunning = (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss");
-        }
-
         private void DoSync()
         {
             if (IsSyncing)
@@ -237,9 +243,11 @@ namespace LowResPhoto
                 {
                     Folders.Where(x => x.Status == ConvertStatus.Working).ToList().ForEach(x => x.Status = ConvertStatus.Cancelled);
                 }), DispatcherPriority.ApplicationIdle);
+                AddLog(LogCategory.Info, $"Sync stopped at {DateTime.Now.ToString("T")}");
             }
             else
             {
+                AddLog(LogCategory.Info, $"Sync started at {DateTime.Now.ToString("T")}");
                 HighResFolder = HighResFolder.TrimEnd('\\');
                 LowResFolder = LowResFolder.TrimEnd('\\');
                 IsSyncing = true;
@@ -260,7 +268,10 @@ namespace LowResPhoto
             }
         }
 
-        private ConcurrentQueue<WorkItem> _workQueue;
+        private bool CanSync()
+        {
+            return true;
+        }
 
         private void ScheduleWork()
         {
@@ -316,9 +327,7 @@ namespace LowResPhoto
                 delFile.Delete();
             }
         }
-
-        private int _currentRunningCount;
-
+        
         private bool ShouldRunWork
         {
             get
@@ -365,6 +374,25 @@ namespace LowResPhoto
                 });
             }
             IsSyncing = false;
+        }
+
+        private void AddOneDone(WorkItem wi, bool isCopied, bool isMeta)
+        {
+            lock (wi.Folder)
+            {
+                if (isCopied)
+                    wi.Folder.CountCopied++;
+                else
+                    wi.Folder.CountSkipped++;
+
+                if (isMeta)
+                    wi.Folder.CountMeta++;
+
+                if (wi.Folder.CountAll <= wi.Folder.CountDone)
+                    wi.Folder.Status = ConvertStatus.Done;
+            }
+            if (AutoScroll)
+                OnWorkItemCompleted?.Invoke(this, new WorkItemCompletedEventArgs() { Folder = wi.Folder });
         }
 
         #region Meta
@@ -433,7 +461,7 @@ namespace LowResPhoto
             }
             catch (Exception ex)
             {
-
+                AddLog(LogCategory.Error, ex.ToString());
             }
         }
 
@@ -441,27 +469,10 @@ namespace LowResPhoto
         {
             _photoQueue.Enqueue(MetaRetriever.RetrieveFromFile(fi));
         }
-
+        
         #endregion
-        private void AddOneDone(WorkItem wi, bool isCopied, bool isMeta)
-        {
-            lock (wi.Folder)
-            {
-                if (isCopied)
-                    wi.Folder.CountCopied++;
-                else
-                    wi.Folder.CountSkipped++;
 
-                if (isMeta)
-                    wi.Folder.CountMeta++;
-
-                if (wi.Folder.CountAll <= wi.Folder.CountDone)
-                    wi.Folder.Status = ConvertStatus.Done;
-            }
-            if (AutoScroll)
-                OnWorkItemCompleted?.Invoke(this, new WorkItemCompletedEventArgs() { Folder = wi.Folder });
-        }
-
+        #region Convert
         public string NConvertExe
         {
             get { return NConvertFolder + @"\nconvert.exe"; }
@@ -479,7 +490,8 @@ namespace LowResPhoto
             var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {LongSize} -o \"{targetFI.FullName}\" \"{sourceFI.FullName}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
             var proc = Process.Start(psi);
             proc.WaitForExit(5000);
-        }
+        } 
+        #endregion
 
         private ConvertFolder GetNextFolder()
         {
@@ -511,16 +523,14 @@ namespace LowResPhoto
             }
         }
 
-        private bool CanSync()
-        {
-            return true;
-        }
-
-        public ObservableCollection<ConvertFolder> Folders { get; } = new ObservableCollection<ConvertFolder>();
-
         public void SaveSetting()
         {
             PersistAllSettings(PersistDirection.Save);
+        }
+
+        private void AddLog(LogCategory logCategory, string message)
+        {
+            Logs.Insert(0, new LogItem() { Category = logCategory, Message = message });
         }
     }
 
@@ -608,5 +618,17 @@ namespace LowResPhoto
     public class WorkItemCompletedEventArgs : EventArgs
     {
         public ConvertFolder Folder { get; set; }
+    }
+
+    public enum LogCategory
+    {
+        Info,
+        Error
+    }
+
+    public class LogItem
+    {
+        public LogCategory Category { get; set; }
+        public string Message { get; set; }
     }
 }

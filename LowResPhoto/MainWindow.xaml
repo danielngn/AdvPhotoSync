@@ -72,6 +72,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid">
                     <DataGrid.Columns>
@@ -88,6 +89,12 @@
                     <TextBlock Text="Time Running:" Margin="5"/>
                     <TextBlock Text="{Binding Path=TimeRunning}" Margin="5"/>
                 </StackPanel>
+                <DataGrid Grid.Row="2" Height="70" Margin="5,0" ItemsSource="{Binding Path=Logs}" AutoGenerateColumns="False" HeadersVisibility="None">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Category" Width="Auto" Binding="{Binding Path=Category}"/>
+                        <DataGridTextColumn Header="Message" Width="*" Binding="{Binding Path=Message}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </GroupBox>
 
