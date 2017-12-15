@@ -33,7 +33,11 @@ namespace LowResPhoto
 
                 var shutterApex = GetDoubleFromId(0x9201, img);
                 if (shutterApex != null)
+                {                    
                     photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
+                    if (photo.ShutterSpeed > float.MaxValue)
+                        photo.ShutterSpeed = null;
+                }
 
                 var dateTakenStr = GetStringFromId(0x132, img);
                 if (!string.IsNullOrEmpty(dateTakenStr))

@@ -198,7 +198,7 @@ namespace LowResPhoto
         private bool _hasScheduleDone;
         private DateTime _startTime;
         private Timer _runningTimer;
-        
+
         private bool _isSyncing;
         public bool IsSyncing
         {
@@ -273,6 +273,8 @@ namespace LowResPhoto
                 IsSyncing = false;
                 return;
             }
+            var q = from photo in MetaContext.Photos select photo.FullPath;
+            _existingMeta = q.ToList();
             _workQueue = new ConcurrentQueue<WorkItem>();
             _photoQueue = new ConcurrentQueue<Photo>();
             AddedRecordCount = 0;
@@ -327,6 +329,7 @@ namespace LowResPhoto
 
         private void RunWork()
         {
+            Thread.Sleep(500);
             while (ShouldRunWork)
             {
                 while (_workQueue == null || _currentRunningCount >= Concurrency || (!_workQueue.Any() && !_hasScheduleDone))
@@ -336,27 +339,28 @@ namespace LowResPhoto
                 if (!_workQueue.TryDequeue(out wi))
                     continue;
 
-                bool toCopy = true;
+                bool toCopy = true, toMeta = true;
                 var targetFI = new FileInfo(wi.File.FullName.Replace(HighResFolder, LowResFolder));
                 if (targetFI.Exists && SkipExisting)
-                {
                     toCopy = false;
-                }
-                if (!toCopy && !RetrieveMeta)
+                if (!RetrieveMeta || (SkipExisting && _existingMeta.Any(x=> string.Equals(x, wi.File.FullName, StringComparison.InvariantCultureIgnoreCase))))
+                    toMeta = false;
+
+                if (!toCopy && !toMeta)
                 {
-                    AddOneDone(wi, false);
+                    AddOneDone(wi, false, false);
                     continue;
                 }
                 Interlocked.Increment(ref _currentRunningCount);
                 Task.Factory.StartNew(() =>
                 {
-                    if (RetrieveMeta)
+                    if (toMeta)
                         DoRetrieveMeta(wi.File);
 
                     if (toCopy)
                         ConvertFile(wi.File, targetFI);
 
-                    AddOneDone(wi, toCopy);
+                    AddOneDone(wi, toCopy, toMeta);
                     Interlocked.Decrement(ref _currentRunningCount);
                 });
             }
@@ -391,8 +395,9 @@ namespace LowResPhoto
         }
 
         private ConcurrentQueue<Photo> _photoQueue;
+        private List<Photo> _pendingMetaQueue = new List<Photo>();
         private const int MaxSave = 50;
-        private int _pendingAddCount;
+        private List<string> _existingMeta;
 
         private void SaveMeta()
         {
@@ -408,10 +413,10 @@ namespace LowResPhoto
                 var existing = MetaContext.Photos.FirstOrDefault(x => x.FullPath == photo.FullPath);
                 if (existing == null)
                 {
+                    _pendingMetaQueue.Add(photo);
                     MetaContext.Photos.Add(photo);
-                    _pendingAddCount++;
                 }
-                if (_pendingAddCount >= MaxSave)
+                if (_pendingMetaQueue.Count >= MaxSave)
                     SaveDB();
             }
             SaveDB();
@@ -419,10 +424,17 @@ namespace LowResPhoto
 
         private void SaveDB()
         {
-            var count = MetaContext.SaveChanges();
-            AddedRecordCount += count;
-            TotalRecordCount = MetaContext.Photos.Count();
-            _pendingAddCount = 0;
+            try
+            {
+                var count = MetaContext.SaveChanges();
+                AddedRecordCount += count;
+                TotalRecordCount = MetaContext.Photos.Count();
+                _pendingMetaQueue.Clear();
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
 
         private void DoRetrieveMeta(FileInfo fi)
@@ -431,7 +443,7 @@ namespace LowResPhoto
         }
 
         #endregion
-        private void AddOneDone(WorkItem wi, bool isCopied)
+        private void AddOneDone(WorkItem wi, bool isCopied, bool isMeta)
         {
             lock (wi.Folder)
             {
@@ -440,7 +452,7 @@ namespace LowResPhoto
                 else
                     wi.Folder.CountSkipped++;
 
-                if (RetrieveMeta)
+                if (isMeta)
                     wi.Folder.CountMeta++;
 
                 if (wi.Folder.CountAll <= wi.Folder.CountDone)
