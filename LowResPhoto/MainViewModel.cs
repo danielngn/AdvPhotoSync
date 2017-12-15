@@ -189,7 +189,10 @@ namespace LowResPhoto
             }
         }
 
-        private string _SyncCaption = "Sync";
+        private const string CaptionSync = "_Sync";
+        private const string CaptionCancel = "_Cancel";
+
+        private string _SyncCaption = CaptionSync;
         public string SyncCaption
         {
             get { return _SyncCaption; }
@@ -220,14 +223,14 @@ namespace LowResPhoto
                 NotifyPropertyChanged(nameof(IsSyncing));
                 if (_isSyncing)
                 {
-                    SyncCaption = "Cancel";
+                    SyncCaption = CaptionCancel;
                     _startTime = DateTime.Now;
                     _runningTimer = new Timer(new TimerCallback(SetRunningTime));
                     _runningTimer.Change(0, 1000);
                 }
                 else
                 {
-                    SyncCaption = "Sync";
+                    SyncCaption = CaptionSync;
                     _runningTimer?.Change(0, -1);
                 }
             }

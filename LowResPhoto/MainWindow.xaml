@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LowResPhoto"
         mc:Ignorable="d"
-        Title="MainWindow" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing" DataContextChanged="Window_DataContextChanged">
+        Title="LowResPhoto" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing" DataContextChanged="Window_DataContextChanged">
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
