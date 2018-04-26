@@ -35,6 +35,7 @@ namespace LowResPhoto
         public MainViewModel()
         {
             PersistAllSettings(PersistDirection.Load);
+            _uiDispatcher = Dispatcher.CurrentDispatcher;
         }
 
         #region Persistence
@@ -207,7 +208,7 @@ namespace LowResPhoto
         private Timer _runningTimer;
         private ConcurrentQueue<WorkItem> _workQueue;
         private int _currentRunningCount;
-        
+
         private void SetRunningTime(object stateInfo)
         {
             TimeRunning = (DateTime.Now - _startTime).ToString(@"hh\:mm\:ss");
@@ -257,7 +258,6 @@ namespace LowResPhoto
                 _hasAnalyzeDone = false;
                 _isCanceling = false;
                 _hasScheduleDone = false;
-                _uiDispatcher = Dispatcher.CurrentDispatcher;
                 Folders.Clear();
                 ThreadPool.QueueUserWorkItem(x =>
                 {
@@ -305,6 +305,7 @@ namespace LowResPhoto
                     targetFolder.Create();
                 else
                 {
+                    DeleteTargetOnlyFolders(currentFolder, targetFolder);
                     DeleteTargetOnlyFiles(currentFolder, targetFolder);
                 }
                 if (_isCanceling)
@@ -324,13 +325,26 @@ namespace LowResPhoto
         {
             var existingFiles = targetFolder.GetFiles();
             var toDelete = existingFiles.Where(ef => !sourceFolder.JpegFiles.Any(x => x.Name.Equals(ef.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
-            sourceFolder.CountDelete = toDelete.Count;
+            sourceFolder.CountDeleteFile = toDelete.Count;
             foreach (var delFile in toDelete)
             {
                 delFile.Delete();
             }
         }
-        
+
+        public static void DeleteTargetOnlyFolders(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        {
+            var targetFolders = targetFolder.GetDirectories();
+            var sourceDirectory = new DirectoryInfo(sourceFolder.Path);
+            var sourceFolders = sourceDirectory.GetDirectories();
+            var toDelete = targetFolders.Where(folder => !sourceFolders.Any(x => x.Name.Equals(folder.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
+            sourceFolder.CountDeleteFolder = toDelete.Count;
+            foreach (var folder in toDelete)
+            {
+                folder.Delete(true);
+            }
+        }
+
         private bool ShouldRunWork
         {
             get
@@ -355,7 +369,7 @@ namespace LowResPhoto
                 var targetFI = new FileInfo(wi.File.FullName.Replace(HighResFolder, LowResFolder));
                 if (targetFI.Exists && SkipExisting)
                     toCopy = false;
-                if (!RetrieveMeta || (SkipExisting && _existingMeta.Any(x=> string.Equals(x, wi.File.FullName, StringComparison.InvariantCultureIgnoreCase))))
+                if (!RetrieveMeta || (SkipExisting && _existingMeta.Any(x => string.Equals(x, wi.File.FullName, StringComparison.InvariantCultureIgnoreCase))))
                     toMeta = false;
 
                 if (!toCopy && !toMeta)
@@ -377,6 +391,7 @@ namespace LowResPhoto
                 });
             }
             IsSyncing = false;
+            AddLog(LogCategory.Info, $"Sync completed at {DateTime.Now.ToString("T")}");
         }
 
         private void AddOneDone(WorkItem wi, bool isCopied, bool isMeta)
@@ -472,7 +487,7 @@ namespace LowResPhoto
         {
             _photoQueue.Enqueue(MetaRetriever.RetrieveFromFile(fi));
         }
-        
+
         #endregion
 
         #region Convert
@@ -493,7 +508,7 @@ namespace LowResPhoto
             var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {LongSize} -o \"{targetFI.FullName}\" \"{sourceFI.FullName}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
             var proc = Process.Start(psi);
             proc.WaitForExit(5000);
-        } 
+        }
         #endregion
 
         private ConvertFolder GetNextFolder()
@@ -533,7 +548,10 @@ namespace LowResPhoto
 
         private void AddLog(LogCategory logCategory, string message)
         {
-            Logs.Insert(0, new LogItem() { Category = logCategory, Message = message });
+            _uiDispatcher.BeginInvoke(new Action(() =>
+            {
+                Logs.Insert(0, new LogItem() { Category = logCategory, Message = message });
+            }));
         }
     }
 
@@ -579,11 +597,28 @@ namespace LowResPhoto
             set { _CountCopied = value; NotifyPropertyChanged(nameof(CountCopied)); }
         }
 
-        private int _CountDelete;
-        public int CountDelete
+        public string CountDelete
         {
-            get { return _CountDelete; }
-            set { _CountDelete = value; NotifyPropertyChanged(nameof(CountDelete)); }
+            get
+            {
+                if (CountDeleteFile == 0 && CountDeleteFolder == 0)
+                    return "0";
+                return $"{CountDeleteFile} files/{CountDeleteFolder} folders";
+            }
+        }
+
+        private int _CountDeleteFile;
+        public int CountDeleteFile
+        {
+            get { return _CountDeleteFile; }
+            set { _CountDeleteFile = value; NotifyPropertyChanged(nameof(CountDelete)); }
+        }
+
+        private int _CountDeleteFolder;
+        public int CountDeleteFolder
+        {
+            get { return _CountDeleteFolder; }
+            set { _CountDeleteFolder = value; NotifyPropertyChanged(nameof(CountDelete)); }
         }
 
         private int _CountMeta;

@@ -80,7 +80,7 @@
                         <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>
                         <DataGridTextColumn Header="# Source" Width="Auto" Binding="{Binding Path=CountAll}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                         <DataGridTextColumn Header="# Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                        <DataGridTextColumn Header="# Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
+                        <DataGridTextColumn Header="# Deleted" Width="100" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                         <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountCopied}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
                         <DataGridTextColumn Header="# Meta" Width="Auto" Binding="{Binding Path=CountMeta}" CellStyle="{StaticResource RightAlignedCellStyle}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
                     </DataGrid.Columns>
