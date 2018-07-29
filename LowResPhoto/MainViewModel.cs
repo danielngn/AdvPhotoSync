@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
+using Winform = System.Windows.Forms;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -15,6 +15,7 @@ using LowResPhoto.Properties;
 using System.Reflection;
 using System.Windows;
 using PhotoMetadata;
+using System.Windows.Data;
 
 namespace LowResPhoto
 {
@@ -32,10 +33,12 @@ namespace LowResPhoto
     {
         public event EventHandler<WorkItemCompletedEventArgs> OnWorkItemCompleted;
 
+        private readonly object _foldersLock = new object();
         public MainViewModel()
         {
             PersistAllSettings(PersistDirection.Load);
             _uiDispatcher = Dispatcher.CurrentDispatcher;
+            BindingOperations.EnableCollectionSynchronization(Folders, _foldersLock);
         }
 
         #region Persistence
@@ -65,6 +68,12 @@ namespace LowResPhoto
 
         private void PersistAllSettings(PersistDirection direction)
         {
+            if (direction == PersistDirection.Load && Settings.Default.UpgradeSetting)
+            {
+                Settings.Default.Upgrade();
+                Settings.Default.UpgradeSetting = false;
+                Settings.Default.Save();
+            }
             foreach (var setting in PersistedSettings)
             {
                 var vmProp = MyProps.FirstOrDefault(x => x.Name.Equals(setting.Name, StringComparison.InvariantCultureIgnoreCase));
@@ -86,20 +95,7 @@ namespace LowResPhoto
         }
         #endregion
 
-        private int _WindowHeight;
-        public int WindowHeight
-        {
-            get { return _WindowHeight; }
-            set { _WindowHeight = value; NotifyPropertyChanged(nameof(WindowHeight)); }
-        }
-
-        private int _WindowWidth;
-        public int WindowWidth
-        {
-            get { return _WindowWidth; }
-            set { _WindowWidth = value; NotifyPropertyChanged(nameof(WindowWidth)); }
-        }
-
+        #region Path
         private string _HighResFolder;
         public string HighResFolder
         {
@@ -121,11 +117,67 @@ namespace LowResPhoto
             set { _NConvertFolder = value; NotifyPropertyChanged(nameof(NConvertFolder)); }
         }
 
-        private bool _SkipExisting;
-        public bool SkipExisting
+        private ICommand _BrowseSourceCommand;
+        public ICommand BrowseSourceCommand
         {
-            get { return _SkipExisting; }
-            set { _SkipExisting = value; NotifyPropertyChanged(nameof(SkipExisting)); }
+            get
+            {
+                if (_BrowseSourceCommand == null)
+                    _BrowseSourceCommand = new RelayCommand(x => SelectFolder(nameof(HighResFolder)));
+                return _BrowseSourceCommand;
+            }
+        }
+
+        private ICommand _BrowseTargetCommand;
+        public ICommand BrowseTargetCommand
+        {
+            get
+            {
+                if (_BrowseTargetCommand == null)
+                    _BrowseTargetCommand = new RelayCommand(x => SelectFolder(nameof(LowResFolder)));
+                return _BrowseTargetCommand;
+            }
+        }
+
+        private ICommand _BrowseNconvertCommand;
+        public ICommand BrowseNconvertCommand
+        {
+            get
+            {
+                if (_BrowseNconvertCommand == null)
+                    _BrowseNconvertCommand = new RelayCommand(x => SelectFolder(nameof(NConvertFolder)));
+                return _BrowseNconvertCommand;
+            }
+        }
+
+        private void SelectFolder(string propertyName)
+        {
+            var browser = new Winform.FolderBrowserDialog();
+            var property = this.GetType().GetProperty(propertyName);
+            var folder = property.GetValue(this)?.ToString();
+            if (!string.IsNullOrEmpty(folder))
+            {
+                browser.SelectedPath = folder;
+            }
+            var result = browser.ShowDialog();
+            if (result == Winform.DialogResult.Cancel) return;
+            property.SetValue(this, browser.SelectedPath);
+        }
+        #endregion
+
+        #region Setting
+        private int _WindowHeight;
+        public int WindowHeight
+        {
+            get { return _WindowHeight; }
+            set { _WindowHeight = value; NotifyPropertyChanged(nameof(WindowHeight)); }
+        }
+
+        private int _WindowWidth;
+        public int WindowWidth
+        {
+            get { return _WindowWidth; }
+            set { _WindowWidth = value; NotifyPropertyChanged(nameof(WindowWidth)); }
         }
 
         private bool _RetrieveMeta;
@@ -160,6 +212,18 @@ namespace LowResPhoto
             get { return _LongSize; }
             set { _LongSize = value; NotifyPropertyChanged(nameof(LongSize)); }
         }
+
+        private ExistingFileAction _SelectedExistingFileAction;
+        public ExistingFileAction SelectedExistingFileAction
+        {
+            get => _SelectedExistingFileAction;
+            set
+            {
+                _SelectedExistingFileAction = value;
+                NotifyPropertyChanged(nameof(SelectedExistingFileAction));
+            }
+        }
+        #endregion
 
         private Visibility _MetaDbVisibility;
         public Visibility MetaDbVisibility
@@ -280,7 +344,7 @@ namespace LowResPhoto
         {
             while ((Folders.Count == 0 && !_hasAnalyzeDone))
             {
-                Thread.Sleep(300);
+                Thread.Sleep(1000);
             }
             if (Folders.Count == 0)
             {
@@ -361,15 +425,14 @@ namespace LowResPhoto
                 while (_workQueue == null || _currentRunningCount >= Concurrency || (!_workQueue.Any() && !_hasScheduleDone))
                     Thread.Sleep(50);
 
-                WorkItem wi;
-                if (!_workQueue.TryDequeue(out wi))
+                if (!_workQueue.TryDequeue(out WorkItem wi))
                     continue;
 
                 bool toCopy = true, toMeta = true;
                 var targetFI = new FileInfo(wi.File.FullName.Replace(HighResFolder, LowResFolder));
-                if (targetFI.Exists && SkipExisting)
+                if (targetFI.Exists && SelectedExistingFileAction == ExistingFileAction.Skip)
                     toCopy = false;
-                if (!RetrieveMeta || (SkipExisting && _existingMeta.Any(x => string.Equals(x, wi.File.FullName, StringComparison.InvariantCultureIgnoreCase))))
+                if (!RetrieveMeta || (SelectedExistingFileAction == ExistingFileAction.Skip && _existingMeta.Any(x => string.Equals(x, wi.File.FullName, StringComparison.InvariantCultureIgnoreCase))))
                     toMeta = false;
 
                 if (!toCopy && !toMeta)
@@ -383,10 +446,11 @@ namespace LowResPhoto
                     if (toMeta)
                         DoRetrieveMeta(wi.File);
 
+                    bool isCopied = false;
                     if (toCopy)
-                        ConvertFile(wi.File, targetFI);
+                        isCopied = ConvertFile(wi.File, targetFI);
 
-                    AddOneDone(wi, toCopy, toMeta);
+                    AddOneDone(wi, isCopied, toMeta);
                     Interlocked.Decrement(ref _currentRunningCount);
                 });
             }
@@ -496,18 +560,39 @@ namespace LowResPhoto
             get { return NConvertFolder + @"\nconvert.exe"; }
         }
 
-        private void ConvertFile(FileInfo sourceFI, FileInfo targetFI)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sourceFI"></param>
+        /// <param name="targetFI"></param>
+        /// <returns>Is copied</returns>
+        private bool ConvertFile(FileInfo sourceFI, FileInfo targetFI)
         {
             if (_isCanceling)
-                return;
+                return false;
 
+            var source = MetaRetriever.RetrieveFromFile(sourceFI);
+            var effectiveLongSize = Math.Min(LongSize, source.LongSize);
             if (targetFI.Exists)
             {
+                var target = MetaRetriever.RetrieveFromFile(targetFI);
+                if (SelectedExistingFileAction == ExistingFileAction.OverwriteLowerRes && target.LongSize >= effectiveLongSize)
+                {
+                    return false;
+                }
                 targetFI.Delete();
             }
-            var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {LongSize} -o \"{targetFI.FullName}\" \"{sourceFI.FullName}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
-            var proc = Process.Start(psi);
-            proc.WaitForExit(5000);
+            if (source.LongSize <= LongSize)
+            {
+                File.Copy(sourceFI.FullName, targetFI.FullName, true);
+            }
+            else
+            {
+                var psi = new ProcessStartInfo(NConvertExe, $"-out jpeg -resize longest {effectiveLongSize} -o \"{targetFI.FullName}\" \"{sourceFI.FullName}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true, UseShellExecute = false };
+                var proc = Process.Start(psi);
+                proc.WaitForExit(5000);
+            }
+            return true;
         }
         #endregion
 
@@ -526,10 +611,10 @@ namespace LowResPhoto
                 if (jpgFiles.Any())
                 {
                     var cf = new ConvertFolder() { CountAll = jpgFiles.Count, Path = di.FullName, Status = ConvertStatus.Pending, JpegFiles = jpgFiles };
-                    _uiDispatcher.BeginInvoke(new Action(() =>
+                    lock (_foldersLock)
                     {
                         Folders.Add(cf);
-                    }));
+                    }
                 }
             }
             if (dirs.Length > 0)
@@ -662,6 +747,13 @@ namespace LowResPhoto
     {
         Info,
         Error
+    }
+
+    public enum ExistingFileAction
+    {
+        OverwriteLowerRes,
+        Overwrite,
+        Skip,
     }
 
     public class LogItem

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LowResPhoto"
+        xmlns:System="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="LowResPhoto" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing" DataContextChanged="Window_DataContextChanged">
     <Window.DataContext>
@@ -12,6 +13,11 @@
     <Window.Resources>
         <ResourceDictionary>
             <FrameworkElement x:Key="ProxyElement" DataContext="{Binding}"/>
+            <ObjectDataProvider x:Key="dataFromEnum" MethodName="GetValues" ObjectType="{x:Type System:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="local:ExistingFileAction"/>
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
         </ResourceDictionary>
     </Window.Resources>
     <Grid>
@@ -47,19 +53,24 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="High Res Folder:"/>
-                <TextBox Grid.Column="1" Text="{Binding Path=HighResFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox Grid.Column="1" VerticalAlignment="Stretch" Margin="0,2" Text="{Binding Path=HighResFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Column="2" Content="..." Margin="0,2" Padding="3,0" Command="{Binding Path=BrowseSourceCommand}"/>
                 <TextBlock Grid.Row="1" Text="Low Res Folder:"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Path=LowResFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" VerticalAlignment="Stretch" Margin="0,2" Text="{Binding Path=LowResFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Row="1" Grid.Column="2" Content="..." Margin="0,2" Padding="3,0" Command="{Binding Path=BrowseTargetCommand}"/>
                 <TextBlock Grid.Row="2" Text="NConvert Folder:"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox Grid.Row="2" Grid.Column="1" VerticalAlignment="Stretch" Margin="0,2" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Row="2" Grid.Column="2" Content="..." Margin="0,2" Padding="3,0" Command="{Binding Path=BrowseNconvertCommand}"/>
             </Grid>
 
         </GroupBox>
         <StackPanel Grid.Row="1" Margin="5" Orientation="Horizontal">
             <Button Content="{Binding Path=SyncCaption}" Padding="25,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}" Margin="5,0"/>
-            <CheckBox Content="Skip Existing" Margin="10,5" IsChecked="{Binding Path=SkipExisting}" VerticalAlignment="Center"/>
+            <TextBlock Text="Existing File:" Margin="5" VerticalAlignment="Center"/>
+            <ComboBox VerticalContentAlignment="Center" ItemsSource="{Binding Source={StaticResource dataFromEnum}}" SelectedItem="{Binding Path=SelectedExistingFileAction}"/>
             <CheckBox Content="Retrieve Meta" Margin="10,5" IsChecked="{Binding Path=RetrieveMeta}" VerticalAlignment="Center"/>
             <CheckBox Content="Auto Scroll" Margin="10,5" IsChecked="{Binding Path=AutoScroll}" VerticalAlignment="Center"/>
             <TextBlock Text="Concurrency:" Margin="5" VerticalAlignment="Center"/>

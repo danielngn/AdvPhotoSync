@@ -12,6 +12,7 @@ namespace PhotoMetadata
         public DateTime? DateTaken { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
+        public int LongSize => Math.Max(Width, Height);
         public string EquipManufacturer { get; set; }
         public string EquipModel { get; set; }
         public string SoftwareUsed { get; set; }

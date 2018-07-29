@@ -16,7 +16,7 @@ namespace LowResPhoto
         public static Photo RetrieveFromFile(FileInfo file)
         {
             var photo = new Photo() { FullPath = file.FullName, Name = file.Name };
-            using (var stream = file.OpenRead())
+            using (var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 var img = Image.FromStream(stream, false, false);
                 photo.Width = img.Width;
@@ -33,7 +33,7 @@ namespace LowResPhoto
 
                 var shutterApex = GetDoubleFromId(0x9201, img);
                 if (shutterApex != null)
-                {                    
+                {
                     photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
                     if (photo.ShutterSpeed > float.MaxValue)
                         photo.ShutterSpeed = null;

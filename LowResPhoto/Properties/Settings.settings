@@ -32,5 +32,11 @@
     <Setting Name="RetrieveMeta" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="UpgradeSetting" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SelectedExistingFileAction" Type="LowResPhoto.ExistingFileAction" Scope="User">
+      <Value Profile="(Default)">OverwriteLowerRes</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
