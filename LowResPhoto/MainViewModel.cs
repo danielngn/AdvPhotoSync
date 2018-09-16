@@ -604,18 +604,11 @@ namespace LowResPhoto
         private void AnalyseFolder(DirectoryInfo di)
         {
             var dirs = di.GetDirectories();
-            var files = di.GetFiles();
-            if (files.Length > 0)
+            var jpgFiles = di.GetFiles().Where(x => x.Extension.Equals(".jpg", StringComparison.InvariantCultureIgnoreCase)).ToList();
+            var cf = new ConvertFolder() { CountAll = jpgFiles.Count(), Path = di.FullName, Status = ConvertStatus.Pending, JpegFiles = jpgFiles };
+            lock (_foldersLock)
             {
-                var jpgFiles = files.Where(x => x.Extension.Equals(".jpg", StringComparison.InvariantCultureIgnoreCase)).ToList();
-                if (jpgFiles.Any())
-                {
-                    var cf = new ConvertFolder() { CountAll = jpgFiles.Count, Path = di.FullName, Status = ConvertStatus.Pending, JpegFiles = jpgFiles };
-                    lock (_foldersLock)
-                    {
-                        Folders.Add(cf);
-                    }
-                }
+                Folders.Add(cf);
             }
             if (dirs.Length > 0)
             {
