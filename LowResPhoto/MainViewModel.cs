@@ -377,9 +377,15 @@ namespace LowResPhoto
                     currentFolder.Status = ConvertStatus.Cancelled;
                     return;
                 }
-                foreach (var file in currentFolder.JpegFiles)
+                if (currentFolder.JpegFiles.Any())
                 {
-                    _workQueue.Enqueue(new WorkItem() { Folder = currentFolder, File = file });
+                    foreach (var file in currentFolder.JpegFiles)
+                    {
+                        _workQueue.Enqueue(new WorkItem() { Folder = currentFolder, File = file });
+                    }
+                } else
+                {
+                    currentFolder.Status = ConvertStatus.Done;
                 }
             }
             _hasScheduleDone = true;
@@ -396,8 +402,9 @@ namespace LowResPhoto
             }
         }
 
-        public static void DeleteTargetOnlyFolders(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        public void DeleteTargetOnlyFolders(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
         {
+
             var targetFolders = targetFolder.GetDirectories();
             var sourceDirectory = new DirectoryInfo(sourceFolder.Path);
             var sourceFolders = sourceDirectory.GetDirectories();
@@ -405,7 +412,14 @@ namespace LowResPhoto
             sourceFolder.CountDeleteFolder = toDelete.Count;
             foreach (var folder in toDelete)
             {
-                folder.Delete(true);
+                try
+                {
+                    folder.Delete(true);
+                }
+                catch (Exception ex)
+                {
+                    AddLog(LogCategory.Error, $"Error when deleting folder {folder.FullName}, {ex}");
+                }
             }
         }
 
