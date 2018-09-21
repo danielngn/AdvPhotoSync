@@ -391,11 +391,12 @@ namespace LowResPhoto
             _hasScheduleDone = true;
         }
 
-        private static void DeleteTargetOnlyFiles(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        private static void DeleteTargetOnlyFiles(ConvertFolder folder, DirectoryInfo targetFolder)
         {
             var existingFiles = targetFolder.GetFiles();
-            var toDelete = existingFiles.Where(ef => !sourceFolder.JpegFiles.Any(x => x.Name.Equals(ef.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
-            sourceFolder.CountDeleteFile = toDelete.Count;
+            var sourceFolder = new DirectoryInfo(folder.Path);
+            var toDelete = existingFiles.Where(ef => !sourceFolder.GetFiles().Any(x => x.Name.Replace(x.Extension, "").Equals(ef.Name.Replace(ef.Extension, ""), StringComparison.InvariantCultureIgnoreCase))).ToList();
+            folder.CountDeleteFile = toDelete.Count;
             foreach (var delFile in toDelete)
             {
                 delFile.Delete();
