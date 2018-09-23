@@ -342,7 +342,7 @@ namespace LowResPhoto
 
         private void ScheduleWork()
         {
-            while ((Folders.Count == 0 && !_hasAnalyzeDone))
+            while (Folders.Count == 0 && !_hasAnalyzeDone)
             {
                 Thread.Sleep(1000);
             }
@@ -391,30 +391,62 @@ namespace LowResPhoto
             _hasScheduleDone = true;
         }
 
-        private static void DeleteTargetOnlyFiles(ConvertFolder folder, DirectoryInfo targetFolder)
+        private void DeleteTargetOnlyFiles(ConvertFolder folder, DirectoryInfo targetFolder)
         {
-            var existingFiles = targetFolder.GetFiles();
             var sourceFolder = new DirectoryInfo(folder.Path);
-            var toDelete = existingFiles.Where(ef => !sourceFolder.GetFiles().Any(x => x.Name.Replace(x.Extension, "").Equals(ef.Name.Replace(ef.Extension, ""), StringComparison.InvariantCultureIgnoreCase))).ToList();
-            folder.CountDeleteFile = toDelete.Count;
-            foreach (var delFile in toDelete)
-            {
-                delFile.Delete();
-            }
+            folder.CountDeleteFile = DeleteTargetOnlyFiles(sourceFolder, targetFolder);
         }
 
-        public void DeleteTargetOnlyFolders(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        private bool IsSameFileName(FileInfo sourceFile, FileInfo targetFile)
         {
+            var sourceName = sourceFile.Name;
+            if(!string.IsNullOrEmpty(sourceFile.Extension))
+            {
+                sourceName = sourceName.Replace(sourceFile.Extension, "");
+            }
+            var targetName = targetFile.Name;
+            if (!string.IsNullOrEmpty(targetFile.Extension))
+            {
+                targetName = targetName.Replace(targetFile.Extension, "");
+            }
+            return string.Equals(sourceName, targetName, StringComparison.OrdinalIgnoreCase);
+        }
 
+        private int DeleteTargetOnlyFiles(DirectoryInfo sourceFolder, DirectoryInfo targetFolder)
+        {
+            var filesOnTarget = targetFolder.GetFiles();
+            var toDelete = filesOnTarget.Where(fileOnTarget => !sourceFolder.GetFiles().Any(sourceFile => IsSameFileName(sourceFile, fileOnTarget))).ToList();
+            foreach (var delFile in toDelete)
+            {
+                try
+                {
+                    AddLog(LogCategory.Info, $"Deleting file {delFile.FullName}");
+                    delFile.Delete();
+                }
+                catch (Exception ex)
+                {
+                    AddLog(LogCategory.Error, $"Error when deleting file {delFile.FullName}, {ex}");
+                }
+            }
+            return toDelete.Count;
+        }
+
+        private void DeleteTargetOnlyFolders(ConvertFolder sourceFolder, DirectoryInfo targetFolder)
+        {
+            var sourceDirectory = new DirectoryInfo(sourceFolder.Path);            
+            sourceFolder.CountDeleteFolder = DeleteTargetOnlyFolders(sourceDirectory, targetFolder);
+        }
+
+        private int DeleteTargetOnlyFolders(DirectoryInfo sourceFolder, DirectoryInfo targetFolder)
+        {
             var targetFolders = targetFolder.GetDirectories();
-            var sourceDirectory = new DirectoryInfo(sourceFolder.Path);
-            var sourceFolders = sourceDirectory.GetDirectories();
+            var sourceFolders = sourceFolder.GetDirectories();
             var toDelete = targetFolders.Where(folder => !sourceFolders.Any(x => x.Name.Equals(folder.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
-            sourceFolder.CountDeleteFolder = toDelete.Count;
             foreach (var folder in toDelete)
             {
                 try
                 {
+                    AddLog(LogCategory.Info, $"Deleting folder {folder.FullName}");
                     folder.Delete(true);
                 }
                 catch (Exception ex)
@@ -422,6 +454,7 @@ namespace LowResPhoto
                     AddLog(LogCategory.Error, $"Error when deleting folder {folder.FullName}, {ex}");
                 }
             }
+            return toDelete.Count;
         }
 
         private bool ShouldRunWork
@@ -437,7 +470,7 @@ namespace LowResPhoto
             Thread.Sleep(500);
             while (ShouldRunWork)
             {
-                while (_workQueue == null || _currentRunningCount >= Concurrency || (!_workQueue.Any() && !_hasScheduleDone))
+                while (_workQueue == null || _currentRunningCount >= Concurrency || (!_workQueue.Any() && !_hasScheduleDone) || !_hasAnalyzeDone)
                     Thread.Sleep(50);
 
                 if (!_workQueue.TryDequeue(out WorkItem wi))
@@ -613,18 +646,34 @@ namespace LowResPhoto
 
         private ConvertFolder GetNextFolder()
         {
-            return Folders.FirstOrDefault(x => x.Status == ConvertStatus.Pending);
+            lock (_foldersLock)
+            {
+                return Folders.FirstOrDefault(x => x.Status == ConvertStatus.Pending);
+            }
         }
 
         private void AnalyseFolder(DirectoryInfo di)
         {
-            var dirs = di.GetDirectories();
             var jpgFiles = di.GetFiles().Where(x => x.Extension.Equals(".jpg", StringComparison.InvariantCultureIgnoreCase)).ToList();
-            var cf = new ConvertFolder() { CountAll = jpgFiles.Count(), Path = di.FullName, Status = ConvertStatus.Pending, JpegFiles = jpgFiles };
-            lock (_foldersLock)
+            if(jpgFiles.Any())
             {
-                Folders.Add(cf);
+                var cf = new ConvertFolder() { CountAll = jpgFiles.Count(), Path = di.FullName, Status = ConvertStatus.Pending, JpegFiles = jpgFiles };
+                lock (_foldersLock)
+                {
+                    Folders.Add(cf);
+                }
             }
+            else
+            {
+                var targetFolder = new DirectoryInfo(di.FullName.Replace(HighResFolder, LowResFolder));
+                if (targetFolder.Exists)
+                {
+                    DeleteTargetOnlyFolders(di, targetFolder);
+                    DeleteTargetOnlyFiles(di, targetFolder);
+                }
+            }
+
+            var dirs = di.GetDirectories();
             if (dirs.Length > 0)
             {
                 foreach (var dir in dirs)
