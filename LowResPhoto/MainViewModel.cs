@@ -624,9 +624,12 @@ namespace LowResPhoto
             if (targetFI.Exists)
             {
                 var target = MetaRetriever.RetrieveFromFile(targetFI);
-                if (SelectedExistingFileAction == ExistingFileAction.OverwriteLowerRes && target.LongSize >= effectiveLongSize)
+                if (target != null)
                 {
-                    return false;
+                    if ((SelectedExistingFileAction == ExistingFileAction.OverwriteLowerRes && target.LongSize >= effectiveLongSize) || source.LongSize <= LongSize)
+                    {
+                        return false;
+                    }
                 }
                 targetFI.Delete();
             }

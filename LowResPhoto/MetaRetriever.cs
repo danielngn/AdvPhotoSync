@@ -15,41 +15,49 @@ namespace LowResPhoto
     {
         public static Photo RetrieveFromFile(FileInfo file)
         {
-            var photo = new Photo() { FullPath = file.FullName, Name = file.Name };
-            using (var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            try
             {
-                var img = Image.FromStream(stream, false, false);
-                photo.Width = img.Width;
-                photo.Height = img.Height;
-                photo.EquipManufacturer = GetStringFromId(0x10f, img);
-                photo.EquipModel = GetStringFromId(0x110, img);
-                photo.SoftwareUsed = GetStringFromId(0x131, img);
-                photo.ISO = GetIntFromId(0x8827, img);
-                photo.FocalLength = GetDoubleFromId(0x920a, img);
-
-                var apertureApex = GetDoubleFromId(0x9202, img);
-                if (apertureApex != null)
-                    photo.FNumber = Math.Round(Math.Pow(2, apertureApex.Value / 2), 1);
-
-                var shutterApex = GetDoubleFromId(0x9201, img);
-                if (shutterApex != null)
+                var photo = new Photo() { FullPath = file.FullName, Name = file.Name };
+                using (var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
-                    if (photo.ShutterSpeed > float.MaxValue)
-                        photo.ShutterSpeed = null;
-                }
+                    var img = Image.FromStream(stream, false, false);
+                    photo.Width = img.Width;
+                    photo.Height = img.Height;
+                    photo.EquipManufacturer = GetStringFromId(0x10f, img);
+                    photo.EquipModel = GetStringFromId(0x110, img);
+                    photo.SoftwareUsed = GetStringFromId(0x131, img);
+                    photo.ISO = GetIntFromId(0x8827, img);
+                    photo.FocalLength = GetDoubleFromId(0x920a, img);
 
-                var dateTakenStr = GetStringFromId(0x132, img);
-                if (!string.IsNullOrEmpty(dateTakenStr))
-                {
-                    DateTime dateTaken;
-                    if (DateTime.TryParseExact(dateTakenStr, "yyyy:MM:d H:m:s", CultureInfo.InvariantCulture, DateTimeStyles.None, out dateTaken))
+                    var apertureApex = GetDoubleFromId(0x9202, img);
+                    if (apertureApex != null)
+                        photo.FNumber = Math.Round(Math.Pow(2, apertureApex.Value / 2), 1);
+
+                    var shutterApex = GetDoubleFromId(0x9201, img);
+                    if (shutterApex != null)
                     {
-                        photo.DateTaken = dateTaken;
+                        photo.ShutterSpeed = Math.Round(Math.Pow(2, shutterApex.Value), 0);
+                        if (photo.ShutterSpeed > float.MaxValue)
+                            photo.ShutterSpeed = null;
+                    }
+
+                    var dateTakenStr = GetStringFromId(0x132, img);
+                    if (!string.IsNullOrEmpty(dateTakenStr))
+                    {
+                        DateTime dateTaken;
+                        if (DateTime.TryParseExact(dateTakenStr, "yyyy:MM:d H:m:s", CultureInfo.InvariantCulture, DateTimeStyles.None, out dateTaken))
+                        {
+                            photo.DateTaken = dateTaken;
+                        }
                     }
                 }
+                return photo;
+
             }
-            return photo;
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private static Encoding aEncoding = new ASCIIEncoding();
