@@ -5,8 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LowResPhoto"
         xmlns:System="clr-namespace:System;assembly=mscorlib"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="LowResPhoto" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" Closing="Window_Closing" DataContextChanged="Window_DataContextChanged">
+        Title="AdvPhotoSync" Height="{Binding Path=WindowHeight, Mode=TwoWay}" Width="{Binding Path=WindowWidth, Mode=TwoWay}" d:DataContext="{d:DesignInstance local:MainViewModel, IsDesignTimeCreatable=True}" 
+        Closing="Window_Closing" DataContextChanged="Window_DataContextChanged"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="pack://application:,,,/MaterialDesignThemes.Wpf;component/Resources/Roboto/#Roboto">
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
@@ -22,14 +29,15 @@
     </Window.Resources>
     <Grid>
         <Grid.Resources>
-            <Style x:Key="RightAlignedCellStyle">
-                <Setter Property="FrameworkElement.HorizontalAlignment" Value="Right"/>
+            <Style TargetType="TextBlock" x:Key="CenterAlignedTextBlock">
+                <Setter Property="HorizontalAlignment" Value="Center" />
             </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -40,9 +48,11 @@
                 <Grid.Resources>
                     <Style TargetType="TextBlock">
                         <Setter Property="Margin" Value="5"/>
+                        <Setter Property="VerticalAlignment" Value="Center" />
                     </Style>
                     <Style TargetType="TextBox">
                         <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="VerticalContentAlignment" Value="Center"/>
                     </Style>
                 </Grid.Resources>
                 <Grid.RowDefinitions>
@@ -55,7 +65,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="High Res Folder:"/>
+                <TextBlock Text="High Res Folder:" />
                 <TextBox Grid.Column="1" VerticalAlignment="Stretch" Margin="0,2" Text="{Binding Path=HighResFolder, UpdateSourceTrigger=PropertyChanged}"/>
                 <Button Grid.Column="2" Content="..." Margin="0,2" Padding="3,0" Command="{Binding Path=BrowseSourceCommand}"/>
                 <TextBlock Grid.Row="1" Text="Low Res Folder:"/>
@@ -65,10 +75,12 @@
                 <TextBox Grid.Row="2" Grid.Column="1" VerticalAlignment="Stretch" Margin="0,2" Text="{Binding Path=NConvertFolder, UpdateSourceTrigger=PropertyChanged}"/>
                 <Button Grid.Row="2" Grid.Column="2" Content="..." Margin="0,2" Padding="3,0" Command="{Binding Path=BrowseNconvertCommand}"/>
             </Grid>
-
         </GroupBox>
-        <StackPanel Grid.Row="1" Margin="5" Orientation="Horizontal">
-            <Button Content="{Binding Path=SyncCaption}" Padding="25,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}" Margin="5,0"/>
+        <StackPanel Grid.Row="1" Margin="0,5" Orientation="Horizontal">
+            <Button Content="{Binding Path=SyncCaption}" Padding="40,5" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding Path=SyncCommand}" Margin="5,0" Style="{StaticResource MaterialDesignRaisedButton}"
+                materialDesign:ButtonProgressAssist.Value="-1"
+                materialDesign:ButtonProgressAssist.IsIndicatorVisible="True"
+                materialDesign:ButtonProgressAssist.IsIndeterminate="{Binding Path=IsSyncing}"/>
             <TextBlock Text="Existing File:" Margin="5" VerticalAlignment="Center"/>
             <ComboBox VerticalContentAlignment="Center" ItemsSource="{Binding Source={StaticResource dataFromEnum}}" SelectedItem="{Binding Path=SelectedExistingFileAction}"/>
             <CheckBox Content="Retrieve Meta" Margin="10,5" IsChecked="{Binding Path=RetrieveMeta}" VerticalAlignment="Center"/>
@@ -83,33 +95,37 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid">
+                <DataGrid ItemsSource="{Binding Path=Folders}" AutoGenerateColumns="False" Margin="5" x:Name="datagrid" CanUserAddRows="False" CanUserSortColumns="False" IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Status" Width="Auto" Binding="{Binding Path=Status}"/>
                         <DataGridTextColumn Header="Path" Width="*" Binding="{Binding Path=Path}"/>
-                        <DataGridTextColumn Header="# Source" Width="Auto" Binding="{Binding Path=CountAll}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                        <DataGridTextColumn Header="# Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                        <DataGridTextColumn Header="# Deleted" Width="100" Binding="{Binding Path=CountDelete}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                        <DataGridTextColumn Header="# Copied" Width="Auto" Binding="{Binding Path=CountCopied}" CellStyle="{StaticResource RightAlignedCellStyle}"/>
-                        <DataGridTextColumn Header="# Meta" Width="Auto" Binding="{Binding Path=CountMeta}" CellStyle="{StaticResource RightAlignedCellStyle}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
+                        <DataGridTextColumn Header="Source" Width="Auto" Binding="{Binding Path=CountAll}" ElementStyle="{StaticResource CenterAlignedTextBlock}"/>
+                        <DataGridTextColumn Header="Skipped" Width="Auto" Binding="{Binding Path=CountSkipped}" ElementStyle="{StaticResource CenterAlignedTextBlock}"/>
+                        <DataGridTextColumn Header="Deleted" Width="Auto" Binding="{Binding Path=CountDelete}" ElementStyle="{StaticResource CenterAlignedTextBlock}"/>
+                        <DataGridTextColumn Header="Copied" Width="Auto" Binding="{Binding Path=CountCopied}" ElementStyle="{StaticResource CenterAlignedTextBlock}"/>
+                        <DataGridTextColumn Header="Meta" Width="Auto" Binding="{Binding Path=CountMeta}" ElementStyle="{StaticResource CenterAlignedTextBlock}" Visibility="{Binding DataContext.MetaDbVisibility, Source={StaticResource ProxyElement}}"/>
                     </DataGrid.Columns>
                 </DataGrid>
-                <StackPanel Grid.Row="1" Orientation="Horizontal">
-                    <TextBlock Text="Time Running:" Margin="5"/>
-                    <TextBlock Text="{Binding Path=TimeRunning}" Margin="5"/>
-                </StackPanel>
-                <DataGrid Grid.Row="2" Height="70" Margin="5,0" ItemsSource="{Binding Path=Logs}" AutoGenerateColumns="False" HeadersVisibility="None">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Category" Width="Auto" Binding="{Binding Path=Category}"/>
-                        <DataGridTextColumn Header="Message" Width="*" Binding="{Binding Path=Message}"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                <materialDesign:Card materialDesign:ShadowAssist.ShadowDepth="Depth1" Grid.Row="1" Margin="0,10,0,0" >
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Time Elapsed:" Margin="5"/>
+                        <TextBlock Text="{Binding Path=TimeRunning}" Margin="5"/>
+                    </StackPanel>
+                </materialDesign:Card>
             </Grid>
         </GroupBox>
 
-        <GroupBox Grid.Row="3" Header="MetaDB" Margin="5" Visibility="{Binding Path=MetaDbVisibility}">
+        <GroupBox Grid.Row="3" Header="Log" Margin="5">
+            <DataGrid Height="100" ItemsSource="{Binding Path=Logs}" AutoGenerateColumns="False" HeadersVisibility="None" CanUserAddRows="False" IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Category" Width="Auto" Binding="{Binding Path=Category}"/>
+                    <DataGridTextColumn Header="Message" Width="*" Binding="{Binding Path=Message}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+
+        <GroupBox Grid.Row="4" Header="MetaDB" Margin="5" Visibility="{Binding Path=MetaDbVisibility}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Saved:" Margin="5"/>
                 <TextBlock Text="{Binding AddedRecordCount}" Margin="5"/>
